@@ -3,6 +3,8 @@ from flask import Flask
 import smtplib
 from email.mime.text import MIMEText
 import logging
+import threading
+import time
 
 app = Flask(__name__)
 
@@ -47,19 +49,18 @@ def send_startup_email():
         logger.error(f"❌ Failed to send deployment email: {e}")
         return False
 
-@app.before_first_request
-def on_startup():
+def delayed_email():
+    time.sleep(10)
     send_startup_email()
 
 if os.environ.get('SEND_STARTUP_EMAIL', 'true').lower() == 'true':
-    import threading
-    import time
-    
-    def delayed_email():
-        time.sleep(10)
-        send_startup_email()
-    
-    threading.Thread(target=delayed_email).start()
+    email_thread = threading.Thread(target=delayed_email)
+    email_thread.daemon = True
+    email_thread.start()
+
+@app.route('/')
+def home():
+    return "Flask Email App is running! Deployment email has been sent or is being sent."
 
 @app.route('/send-email')
 def send_email_endpoint():
@@ -68,10 +69,6 @@ def send_email_endpoint():
         return "✅ Email sent successfully!"
     else:
         return "❌ Failed to send email", 500
-
-@app.route('/')
-def home():
-    return "Flask Email App is running! Deployment email has been sent."
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
