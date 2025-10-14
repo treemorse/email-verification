@@ -2,19 +2,33 @@ import os
 from flask import Flask
 import smtplib
 from email.mime.text import MIMEText
+import logging
 
 app = Flask(__name__)
 
-@app.route('/send-email')
-def send_email():
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def send_startup_email():
     SMTP_SERVER = "smtp.timeweb.ru"
     SMTP_PORT = 465
     EMAIL_FROM = "admin@blossomm.ru"
     EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
     EMAIL_TO = os.getenv('EMAIL_TO')
 
-    subject = "Тестовое письмо"
-    body = "Это тестовое письмо отправленное через Python скрипт."
+    subject = "🚀 Application Deployed Successfully"
+    body = f"""
+    Hello!
+    
+    Your Flask application has been successfully deployed on Timeweb.
+    
+    Application details:
+    - SMTP Server: {SMTP_SERVER}
+    - From: {EMAIL_FROM}
+    - To: {EMAIL_TO}
+    
+    This is an automated deployment notification.
+    """
 
     msg = MIMEText(body)
     msg['Subject'] = subject
@@ -22,22 +36,42 @@ def send_email():
     msg['To'] = EMAIL_TO
 
     try:
-        print("Подключаемся к серверу...")
+        logger.info("Sending deployment notification email...")
         server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
-        
-        print("Логинимся...")
         server.login(EMAIL_FROM, EMAIL_PASSWORD)
-        
-        print("Отправляем письмо...")
         server.sendmail(EMAIL_FROM, EMAIL_TO, msg.as_string())
-        
-        print("✅ Письмо успешно отправлено!")
         server.quit()
-        return "✅ Письмо успешно отправлено!"
-
+        logger.info("✅ Deployment email sent successfully!")
+        return True
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
-        return f"❌ Ошибка: {e}", 500
+        logger.error(f"❌ Failed to send deployment email: {e}")
+        return False
+
+@app.before_first_request
+def on_startup():
+    send_startup_email()
+
+if os.environ.get('SEND_STARTUP_EMAIL', 'true').lower() == 'true':
+    import threading
+    import time
+    
+    def delayed_email():
+        time.sleep(10)
+        send_startup_email()
+    
+    threading.Thread(target=delayed_email).start()
+
+@app.route('/send-email')
+def send_email_endpoint():
+    success = send_startup_email()
+    if success:
+        return "✅ Email sent successfully!"
+    else:
+        return "❌ Failed to send email", 500
+
+@app.route('/')
+def home():
+    return "Flask Email App is running! Deployment email has been sent."
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
