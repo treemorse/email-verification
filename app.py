@@ -12,9 +12,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def send_startup_email():
-    SMTP_SERVER = "smtp.timeweb.ru"
+    SMTP_SERVER = "mail.hosting.reg.ru"
     SMTP_PORT = 465
-    EMAIL_FROM = "admin@blossomm.ru"
+    EMAIL_FROM = "blossomm@blossomm.ru"
     EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
     EMAIL_TO = os.getenv('EMAIL_TO')
 
